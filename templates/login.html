@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TaskFlow | Sign In</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+
+<body class="auth-body">
+    <div class="auth-wrapper">
+        <div class="auth-card">
+            <div class="auth-logo">TaskFlow</div>
+            <p class="auth-subtitle" id="authSubtitle">Sign in to your account</p>
+
+            <div id="alertBox" class="alert hidden"></div>
+
+            <!-- Login Form -->
+            <form id="loginForm" class="auth-form">
+                <div class="form-group">
+                    <label for="loginEmail">Email</label>
+                    <input type="email" id="loginEmail" placeholder="you@email.com" required>
+                </div>
+                <div class="form-group">
+                    <label for="loginPassword">Password</label>
+                    <div class="password-wrapper">
+                        <input type="password" id="loginPassword" placeholder="••••••••" required>
+                        <button type="button" class="pw-toggle" onclick="togglePwVisibility('loginPassword', this)">
+                            <i data-lucide="eye-off"></i>
+                        </button>
+                    </div>
+                </div>
+                <button type="submit" class="btn-primary">Sign In</button>
+            </form>
+
+            <!-- Register Form -->
+            <form id="registerForm" class="auth-form hidden">
+                <div class="form-group">
+                    <label for="regUsername">Username</label>
+                    <input type="text" id="regUsername" placeholder="johndoe" required>
+                </div>
+                <div class="form-group">
+                    <label for="regEmail">Email</label>
+                    <input type="email" id="regEmail" placeholder="you@email.com" required>
+                </div>
+                <div class="form-group">
+                    <label for="regPassword">Password</label>
+                    <div class="password-wrapper">
+                        <input type="password" id="regPassword" placeholder="••••••••" required
+                            oninput="checkPasswordStrength(this.value)">
+                        <button type="button" class="pw-toggle" onclick="togglePwVisibility('regPassword', this)">
+                            <i data-lucide="eye-off"></i>
+                        </button>
+                    </div>
+                    <div class="pw-strength" id="pwStrength">
+                        <div class="pw-strength-bar" id="pwStrengthBar"></div>
+                    </div>
+                    <span class="pw-strength-label" id="pwStrengthLabel"></span>
+                </div>
+                <div class="form-group">
+                    <label for="regConfirmPassword">Confirm Password</label>
+                    <div class="password-wrapper">
+                        <input type="password" id="regConfirmPassword" placeholder="••••••••" required>
+                        <button type="button" class="pw-toggle"
+                            onclick="togglePwVisibility('regConfirmPassword', this)">
+                            <i data-lucide="eye-off"></i>
+                        </button>
+                    </div>
+                    <div class="field-error hidden" id="confirmPwError">⚠ Passwords do not match</div>
+                </div>
+                <button type="submit" class="btn-primary">Create Account</button>
+            </form>
+
+            <p class="auth-toggle">
+                <span id="toggleText">Don't have an account?</span>
+                <a href="#" id="toggleLink" onclick="toggleAuth(event)">Sign up</a>
+            </p>
+        </div>
+    </div>
+
+    <script>
+        let isLogin = true;
+        lucide.createIcons();
+
+        function toggleAuth(e) {
+            e.preventDefault();
+            isLogin = !isLogin;
+            document.getElementById('loginForm').classList.toggle('hidden', !isLogin);
+            document.getElementById('registerForm').classList.toggle('hidden', isLogin);
+            document.getElementById('authSubtitle').textContent = isLogin ? 'Sign in to your account' : 'Create a new account';
+            document.getElementById('toggleText').textContent = isLogin ? "Don't have an account?" : "Already have an account?";
+            document.getElementById('toggleLink').textContent = isLogin ? 'Sign up' : 'Sign in';
+            hideAlert();
+        }
+
+        function showAlert(msg, type) {
+            const box = document.getElementById('alertBox');
+            box.textContent = msg;
+            box.className = `alert alert-${type}`;
+        }
+        function hideAlert() {
+            document.getElementById('alertBox').className = 'alert hidden';
+        }
+
+        // ─── Password Visibility Toggle ───
+        function togglePwVisibility(inputId, btn) {
+            const input = document.getElementById(inputId);
+            const isPassword = input.type === 'password';
+            input.type = isPassword ? 'text' : 'password';
+            // Swap icon
+            const icon = btn.querySelector('[data-lucide]');
+            if (icon) {
+                icon.setAttribute('data-lucide', isPassword ? 'eye' : 'eye-off');
+                lucide.createIcons();
+            }
+        }
+
+        // ─── Password Strength Meter ───
+        function checkPasswordStrength(pw) {
+            const bar = document.getElementById('pwStrengthBar');
+            const label = document.getElementById('pwStrengthLabel');
+            let score = 0;
+            if (pw.length >= 6) score++;
+            if (pw.length >= 10) score++;
+            if (/[A-Z]/.test(pw)) score++;
+            if (/[0-9]/.test(pw)) score++;
+            if (/[^A-Za-z0-9]/.test(pw)) score++;
+
+            const levels = [
+                { width: '0%', color: 'transparent', text: '' },
+                { width: '20%', color: '#ef4444', text: 'Very weak' },
+                { width: '40%', color: '#f97316', text: 'Weak' },
+                { width: '60%', color: '#eab308', text: 'Fair' },
+                { width: '80%', color: '#22c55e', text: 'Strong' },
+                { width: '100%', color: '#10b981', text: 'Very strong' }
+            ];
+
+            const level = levels[score] || levels[0];
+            bar.style.width = level.width;
+            bar.style.background = level.color;
+            label.textContent = level.text;
+            label.style.color = level.color;
+        }
+
+        // ─── Login Form ───
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('loginEmail').value;
+            const password = document.getElementById('loginPassword').value;
+            try {
+                const res = await fetch('/api/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password })
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    window.location.href = '/';
+                } else {
+                    showAlert(data.error, 'error');
+                }
+            } catch { showAlert('Connection error', 'error'); }
+        });
+
+        // ─── Register Form with Confirm Password ───
+        document.getElementById('registerForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const username = document.getElementById('regUsername').value;
+            const email = document.getElementById('regEmail').value;
+            const password = document.getElementById('regPassword').value;
+            const confirmPw = document.getElementById('regConfirmPassword').value;
+
+            // ─── Password Match Validation ───
+            const confirmEl = document.getElementById('regConfirmPassword');
+            const errEl = document.getElementById('confirmPwError');
+            if (password !== confirmPw) {
+                confirmEl.classList.add('input-error');
+                errEl.classList.remove('hidden');
+                confirmEl.focus();
+                confirmEl.addEventListener('input', function fix() {
+                    confirmEl.classList.remove('input-error');
+                    errEl.classList.add('hidden');
+                    confirmEl.removeEventListener('input', fix);
+                }, { once: true });
+                return;
+            }
+
+            try {
+                const res = await fetch('/api/auth/register', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, email, password })
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    window.location.href = '/';
+                } else {
+                    showAlert(data.error, 'error');
+                }
+            } catch { showAlert('Connection error', 'error'); }
+        });
+    </script>
+</body>
+
+</html>

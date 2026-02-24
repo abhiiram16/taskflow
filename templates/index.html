@@ -1,0 +1,1226 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#6366f1">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>TaskFlow | Dashboard</title>
+    <link rel="manifest" href="/static/manifest.json">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+
+<body>
+    <div class="app-layout">
+        <!-- ─── Sidebar ─── -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-brand">
+                <span class="brand-text">TaskFlow</span>
+            </div>
+            <nav class="sidebar-nav">
+                <a href="#" class="nav-item active" data-tab="dashboard" onclick="switchTab(event, 'dashboard')">
+                    <i data-lucide="layout-dashboard"></i><span>Dashboard</span>
+                </a>
+                <a href="#" class="nav-item" data-tab="all" onclick="switchTab(event, 'all')">
+                    <i data-lucide="list-todo"></i><span>All Tasks</span>
+                </a>
+                <a href="#" class="nav-item" data-tab="completed" onclick="switchTab(event, 'completed')">
+                    <i data-lucide="check-circle-2"></i><span>Completed</span>
+                </a>
+                <a href="#" class="nav-item" data-tab="settings" onclick="switchTab(event, 'settings')">
+                    <i data-lucide="settings"></i><span>Settings</span>
+                </a>
+            </nav>
+            <div class="sidebar-footer">
+                <a href="/api/auth/logout" class="nav-item logout-item">
+                    <i data-lucide="log-out"></i><span>Logout</span>
+                </a>
+            </div>
+        </aside>
+
+        <!-- ─── Main Content ─── -->
+        <div class="main-area">
+            <!-- Top Bar -->
+            <header class="topbar">
+                <button class="hamburger" id="hamburgerBtn" onclick="toggleSidebar()">
+                    <i data-lucide="menu"></i>
+                </button>
+                <div class="topbar-search">
+                    <i data-lucide="search" class="topbar-search-icon"></i>
+                    <input type="text" placeholder="Search tasks..." id="searchInput">
+                </div>
+                <div class="topbar-user">
+                    <div class="user-avatar" id="userAvatar">U</div>
+                    <span class="user-name" id="userName">User</span>
+                </div>
+            </header>
+
+            <!-- Content Panels -->
+            <main class="content">
+
+                <!-- Dashboard Tab -->
+                <section class="panel active" id="panel-dashboard">
+                    <div class="panel-header">
+                        <h2>Dashboard</h2>
+                        <button class="btn-primary" onclick="openModal()">
+                            <i data-lucide="plus" style="width:18px;height:18px;margin-right:6px"></i> New Task
+                        </button>
+                    </div>
+                    <div class="stats-grid">
+                        <div class="stat-card stat-card--total" onclick="toggleFilter('all')" id="filterAll">
+                            <div class="stat-icon" style="background:rgba(99,102,241,0.15);color:#818cf8"><i
+                                    data-lucide="list-todo"></i></div>
+                            <div class="stat-info"><span class="stat-value" id="statTotal">0</span><span
+                                    class="stat-label">Total Tasks</span></div>
+                        </div>
+                        <div class="stat-card stat-card--completed" onclick="toggleFilter('completed')"
+                            id="filterCompleted">
+                            <div class="stat-icon" style="background:rgba(16,185,129,0.15);color:#10b981"><i
+                                    data-lucide="check-circle"></i></div>
+                            <div class="stat-info"><span class="stat-value" id="statDone">0</span><span
+                                    class="stat-label">Completed</span></div>
+                        </div>
+                        <div class="stat-card stat-card--pending" onclick="toggleFilter('pending')" id="filterPending">
+                            <div class="stat-icon" style="background:rgba(245,158,11,0.15);color:#f59e0b"><i
+                                    data-lucide="clock"></i></div>
+                            <div class="stat-info"><span class="stat-value" id="statPending">0</span><span
+                                    class="stat-label">Pending</span></div>
+                        </div>
+                        <div class="stat-card stat-card--high" onclick="toggleFilter('high')" id="filterHigh">
+                            <div class="stat-icon" style="background:rgba(239,68,68,0.15);color:#ef4444"><i
+                                    data-lucide="alert-circle"></i></div>
+                            <div class="stat-info"><span class="stat-value" id="statHigh">0</span><span
+                                    class="stat-label">High Priority</span></div>
+                        </div>
+                    </div>
+                    <div class="filter-indicator hidden" id="filterIndicator">
+                        <span id="filterLabel"></span>
+                        <button class="btn-icon" onclick="toggleFilter(null)" title="Clear filter"><i data-lucide="x"
+                                style="width:14px;height:14px"></i></button>
+                    </div>
+                    <h3 class="sub-heading">Recent Tasks</h3>
+                    <div class="task-list" id="recentTasks"></div>
+                </section>
+
+                <!-- All Tasks Tab -->
+                <section class="panel" id="panel-all">
+                    <div class="panel-header">
+                        <h2>All Tasks</h2>
+                        <button class="btn-primary" onclick="openModal()">
+                            <i data-lucide="plus" style="width:18px;height:18px;margin-right:6px"></i> New Task
+                        </button>
+                    </div>
+                    <div class="task-list" id="allTasksList"></div>
+                </section>
+
+                <!-- Completed Tab -->
+                <section class="panel" id="panel-completed">
+                    <div class="panel-header">
+                        <h2>Completed Tasks</h2>
+                    </div>
+                    <div class="task-list completed-tasks" id="completedTasksList"></div>
+                </section>
+
+                <!-- Settings Tab -->
+                <section class="panel" id="panel-settings">
+                    <div class="panel-header">
+                        <h2>Settings</h2>
+                    </div>
+
+                    <!-- Profile Section -->
+                    <div class="settings-card">
+                        <h3><i data-lucide="user" style="width:18px;height:18px"></i> Profile</h3>
+                        <div class="profile-avatar-section">
+                            <div class="profile-avatar-wrapper"
+                                onclick="document.getElementById('avatarInput').click()">
+                                <div class="profile-avatar-lg" id="profileAvatarLg">U</div>
+                                <div class="avatar-overlay"><i data-lucide="camera" style="width:20px;height:20px"></i>
+                                </div>
+                            </div>
+                            <input type="file" id="avatarInput" accept="image/*" class="hidden"
+                                onchange="uploadAvatar(this.files[0])">
+                            <span class="profile-avatar-hint">Click to change photo</span>
+                        </div>
+                        <div class="settings-form">
+                            <div class="form-group">
+                                <label>Username</label>
+                                <input type="text" id="profileUsername" placeholder="Username">
+                            </div>
+                            <div class="form-group">
+                                <label>Email</label>
+                                <input type="email" id="profileEmail" placeholder="Email">
+                            </div>
+                            <div class="form-group">
+                                <label>Gmail (for notifications)</label>
+                                <input type="email" id="profileGmail" placeholder="your.name@gmail.com">
+                            </div>
+                            <button class="btn-primary" onclick="saveProfile()">Save Profile</button>
+                            <div id="profileAlert" class="settings-alert hidden"></div>
+                        </div>
+                    </div>
+
+                    <!-- Password Section -->
+                    <div class="settings-card">
+                        <h3><i data-lucide="lock" style="width:18px;height:18px"></i> Change Password</h3>
+                        <div class="settings-form">
+                            <div class="form-group">
+                                <label>Current Password</label>
+                                <input type="password" id="currentPassword" placeholder="••••••••">
+                            </div>
+                            <div class="form-group">
+                                <label>New Password</label>
+                                <input type="password" id="newPassword" placeholder="••••••••">
+                            </div>
+                            <div class="form-group">
+                                <label>Confirm New Password</label>
+                                <input type="password" id="confirmPassword" placeholder="••••••••">
+                            </div>
+                            <button class="btn-primary" onclick="changePassword()">Update Password</button>
+                            <div id="passwordAlert" class="settings-alert hidden"></div>
+                        </div>
+                    </div>
+
+                    <!-- Sound Preferences Section -->
+                    <div class="settings-card">
+                        <h3><i data-lucide="volume-2" style="width:18px;height:18px"></i> Notification Sound</h3>
+                        <div class="sound-options">
+                            <label class="sound-option">
+                                <input type="radio" name="soundPref" value="alert" onchange="setSoundPref('alert')">
+                                <span class="sound-option-label">🔴 Alert (High Priority)</span>
+                                <button class="btn-icon sound-preview-btn" data-sound="alert"
+                                    onclick="handlePreview('alert', this, event)" title="Preview"><i data-lucide="play"
+                                        style="width:14px;height:14px"></i></button>
+                            </label>
+                            <label class="sound-option">
+                                <input type="radio" name="soundPref" value="chime" checked
+                                    onchange="setSoundPref('chime')">
+                                <span class="sound-option-label">🟡 Chime (Normal)</span>
+                                <button class="btn-icon sound-preview-btn" data-sound="chime"
+                                    onclick="handlePreview('chime', this, event)" title="Preview"><i data-lucide="play"
+                                        style="width:14px;height:14px"></i></button>
+                            </label>
+                            <label class="sound-option">
+                                <input type="radio" name="soundPref" value="soft" onchange="setSoundPref('soft')">
+                                <span class="sound-option-label">🔵 Soft (Low Priority)</span>
+                                <button class="btn-icon sound-preview-btn" data-sound="soft"
+                                    onclick="handlePreview('soft', this, event)" title="Preview"><i data-lucide="play"
+                                        style="width:14px;height:14px"></i></button>
+                            </label>
+                            <div class="sound-custom-upload">
+                                <label class="sound-option">
+                                    <input type="radio" name="soundPref" value="custom"
+                                        onchange="document.getElementById('customSoundInput').click()">
+                                    <span class="sound-option-label">🎵 Upload Custom Sound</span>
+                                </label>
+                                <input type="file" id="customSoundInput" accept=".mp3,.wav,.ogg" class="hidden"
+                                    onchange="uploadCustomSound(this.files[0])">
+                                <span id="customSoundName" class="sound-custom-name"></span>
+                            </div>
+                        </div>
+                        <div id="soundAlert" class="settings-alert hidden"></div>
+                    </div>
+
+                    <!-- Logout -->
+                    <div class="settings-card">
+                        <div class="settings-row">
+                            <span class="settings-label">Session</span>
+                            <a href="/api/auth/logout" class="btn-danger-sm">Logout</a>
+                        </div>
+                    </div>
+                </section>
+            </main>
+        </div>
+    </div>
+
+    <!-- Hero Notification Tile Overlay -->
+    <div id="heroOverlay" class="hero-overlay hidden"></div>
+
+    <!-- Toast Container -->
+    <div id="toastContainer" class="toast-container"></div>
+
+    <!-- Add / Edit Task Modal -->
+    <div class="modal-overlay" id="modalOverlay" onclick="closeModal(event)">
+        <div class="modal" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <h3 id="modalTitle">New Task</h3>
+                <button class="btn-icon" onclick="closeModal()"><i data-lucide="x"></i></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="editTaskId">
+                <div class="form-group">
+                    <label>Title</label>
+                    <input type="text" id="modalTaskTitle" placeholder="Task title...">
+                </div>
+                <div class="form-group">
+                    <label>Description</label>
+                    <textarea id="modalTaskDesc" placeholder="Add a description..." rows="3"></textarea>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Priority</label>
+                        <select id="modalPriority">
+                            <option value="low">Low</option>
+                            <option value="medium" selected>Medium</option>
+                            <option value="high">High</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Reminder Date</label>
+                        <input type="date" id="modalDate">
+                    </div>
+                    <div class="form-group">
+                        <label>Time</label>
+                        <input type="time" id="modalTime">
+                    </div>
+                </div>
+
+                <!-- Per-Task Sound Mode -->
+                <div class="form-row">
+                    <div class="form-group" style="flex:1">
+                        <label>Notification Sound</label>
+                        <div class="task-sound-row">
+                            <select id="modalSound" onchange="onModalSoundChange()">
+                                <option value="" selected>🔊 Act Accordingly (System Default)</option>
+                                <option value="none">🔇 No Sound</option>
+                                <option value="custom">🎵 Custom Sound</option>
+                            </select>
+                            <button class="btn-icon sound-preview-btn" id="modalPreviewBtn" data-sound="modal"
+                                onclick="previewModalSound(this, event)" title="Preview"><i data-lucide="play"
+                                    style="width:16px;height:16px"></i></button>
+                        </div>
+                        <div class="task-sound-custom-upload hidden" id="modalCustomUpload">
+                            <input type="file" id="modalSoundFile" accept=".mp3,.wav,.ogg" class="hidden"
+                                onchange="handleModalSoundUpload(this.files[0])">
+                            <button class="btn-secondary" type="button"
+                                onclick="document.getElementById('modalSoundFile').click()"
+                                style="font-size:0.8rem;padding:0.4rem 0.8rem">
+                                <i data-lucide="upload" style="width:14px;height:14px;margin-right:4px"></i> Upload
+                                Sound
+                            </button>
+                            <span class="modal-sound-name" id="modalSoundFileName"></span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- File Drop Zone -->
+                <div class="form-group">
+                    <label>Attachments</label>
+                    <div class="dropzone" id="dropzone" onclick="document.getElementById('fileInput').click()">
+                        <i data-lucide="upload-cloud" class="dropzone-icon"></i>
+                        <p>Drag & drop files here or <strong>click to browse</strong></p>
+                        <span class="dropzone-hint">PDF, Word, Images, Videos — up to 50MB</span>
+                    </div>
+                    <input type="file" id="fileInput" multiple class="hidden" onchange="handleFiles(this.files)">
+                    <div class="file-preview-list" id="filePreviewList"></div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" onclick="closeModal()">Cancel</button>
+                <button class="btn-primary" id="modalSaveBtn" onclick="saveTask()">Save Task</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ─── State ───
+        let allTasks = [];
+        let pendingFiles = [];
+        let currentTab = 'dashboard';
+        let activeFilter = null;
+
+        // ─── Init ───
+        lucide.createIcons();
+        fetchUser();
+        fetchTasks();
+        requestNotificationPermission();
+        registerServiceWorker();
+
+        // ─── User ───
+        let userPrefs = { preferred_sound: 'chime' };
+
+        async function fetchUser() {
+            try {
+                const res = await fetch('/api/auth/me');
+                if (!res.ok) return;
+                const data = await res.json();
+                userPrefs = data;
+                document.getElementById('userName').textContent = data.username;
+                // Avatar
+                if (data.profile_pic_url) {
+                    document.getElementById('userAvatar').innerHTML = `<img src="/uploads/${data.profile_pic_url}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`;
+                    document.getElementById('profileAvatarLg').innerHTML = `<img src="/uploads/${data.profile_pic_url}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`;
+                } else {
+                    document.getElementById('userAvatar').textContent = data.username.charAt(0).toUpperCase();
+                    document.getElementById('profileAvatarLg').textContent = data.username.charAt(0).toUpperCase();
+                }
+                // Settings form
+                document.getElementById('profileUsername').value = data.username;
+                document.getElementById('profileEmail').value = data.email;
+                document.getElementById('profileGmail').value = data.gmail || '';
+                // Sound pref
+                const soundVal = data.preferred_sound || 'chime';
+                if (soundVal.startsWith('custom:')) {
+                    document.querySelector('input[name="soundPref"][value="custom"]').checked = true;
+                    document.getElementById('customSoundName').textContent = '✓ Custom sound active';
+                } else {
+                    const radio = document.querySelector(`input[name="soundPref"][value="${soundVal}"]`);
+                    if (radio) radio.checked = true;
+                }
+            } catch { }
+        }
+
+        // ─── Tasks ───
+        async function fetchTasks() {
+            try {
+                const res = await fetch('/api/tasks');
+                allTasks = await res.json();
+                renderAll();
+            } catch (err) { console.error(err); }
+        }
+
+        function renderAll() {
+            const search = document.getElementById('searchInput').value.toLowerCase();
+            const filtered = allTasks.filter(t => t.title.toLowerCase().includes(search) || (t.description || '').toLowerCase().includes(search));
+
+            const active = filtered.filter(t => !t.is_completed);
+            const done = filtered.filter(t => t.is_completed);
+
+            // Stats
+            document.getElementById('statTotal').textContent = allTasks.length;
+            document.getElementById('statDone').textContent = allTasks.filter(t => t.is_completed).length;
+            document.getElementById('statPending').textContent = allTasks.filter(t => !t.is_completed).length;
+            document.getElementById('statHigh').textContent = allTasks.filter(t => t.priority === 'high' && !t.is_completed).length;
+
+            // Apply stat card filter for dashboard "Recent Tasks"
+            let recentTasks = active;
+            if (activeFilter === 'completed') recentTasks = done;
+            else if (activeFilter === 'pending') recentTasks = active;
+            else if (activeFilter === 'high') recentTasks = active.filter(t => t.priority === 'high');
+            else if (activeFilter === 'all') recentTasks = filtered;
+
+            // Recent (dashboard)
+            renderList('recentTasks', activeFilter ? recentTasks : active.slice(0, 5));
+            // All tasks
+            renderList('allTasksList', active);
+            // Completed
+            renderList('completedTasksList', done);
+            lucide.createIcons();
+        }
+
+        function renderList(containerId, tasks) {
+            const container = document.getElementById(containerId);
+            if (!container) return;
+            if (tasks.length === 0) {
+                container.innerHTML = '<div class="empty-state"><i data-lucide="inbox" style="width:40px;height:40px;opacity:0.3"></i><p>No tasks here yet</p></div>';
+                return;
+            }
+            container.innerHTML = tasks.map(t => createCardHTML(t)).join('');
+        }
+
+        function createCardHTML(task) {
+            const priorityClass = task.priority === 'high' ? 'priority-high' : task.priority === 'low' ? 'priority-low' : 'priority-med';
+            const glassClass = task.priority === 'high' ? 'task-card--high' : task.priority === 'low' ? 'task-card--low' : 'task-card--medium';
+            const reminderHtml = task.reminder_date ? `<span class="reminder-tag"><i data-lucide="bell" style="width:12px;height:12px"></i> ${task.reminder_date} ${task.reminder_time || ''}</span>` : '';
+            const attachHtml = task.attachments && task.attachments.length > 0 ? `<span class="attach-tag"><i data-lucide="paperclip" style="width:12px;height:12px"></i> ${task.attachments.length} file${task.attachments.length > 1 ? 's' : ''}</span>` : '';
+
+            return `
+            <div class="task-card ${glassClass}" data-id="${task.id}">
+                <div class="task-left">
+                    <button class="check-btn ${task.is_completed ? 'checked' : ''}" onclick="toggleTask(${task.id}, ${!task.is_completed})">
+                        <i data-lucide="${task.is_completed ? 'check-circle-2' : 'circle'}"></i>
+                    </button>
+                    <div class="task-content">
+                        <div class="task-title ${task.is_completed ? 'done' : ''}">${task.title}</div>
+                        <div class="task-meta">
+                            <span class="priority-badge ${priorityClass}">${task.priority}</span>
+                            ${reminderHtml}
+                            ${attachHtml}
+                        </div>
+                        ${task.description ? `<div class="task-desc">${task.description}</div>` : ''}
+                        ${renderAttachmentPreviews(task.attachments)}
+                    </div>
+                </div>
+                <div class="task-actions">
+                    <button class="btn-icon" onclick="editTask(${task.id})" title="Edit"><i data-lucide="edit-3"></i></button>
+                    <button class="btn-icon btn-delete" onclick="deleteTask(${task.id})" title="Delete"><i data-lucide="trash-2"></i></button>
+                </div>
+            </div>`;
+        }
+
+        function renderAttachmentPreviews(attachments) {
+            if (!attachments || attachments.length === 0) return '';
+            return '<div class="attachment-previews">' + attachments.map(a => {
+                if (a.file_type === 'image') {
+                    return `<div class="att-thumb"><img src="${a.url}" alt="${a.filename}"><button class="att-remove" onclick="deleteAttachment(${a.id}, event)"><i data-lucide="x" style="width:10px;height:10px"></i></button></div>`;
+                }
+                const icon = a.file_type === 'video' ? 'film' : 'file-text';
+                return `<a href="${a.url}" target="_blank" class="att-file"><i data-lucide="${icon}" style="width:14px;height:14px"></i> ${a.filename}<button class="att-remove" onclick="deleteAttachment(${a.id}, event)"><i data-lucide="x" style="width:10px;height:10px"></i></button></a>`;
+            }).join('') + '</div>';
+        }
+
+        // ─── Search ───
+        document.getElementById('searchInput').addEventListener('input', renderAll);
+
+        // ─── Tab Switching ───
+        function switchTab(e, tab) {
+            e.preventDefault();
+            currentTab = tab;
+            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+            e.currentTarget.classList.add('active');
+            document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+            document.getElementById(`panel-${tab}`).classList.add('active');
+            // Close sidebar on mobile
+            document.getElementById('sidebar').classList.remove('open');
+        }
+
+        // ─── Sidebar Toggle ───
+        function toggleSidebar() {
+            document.getElementById('sidebar').classList.toggle('open');
+        }
+
+        // ─── Modal ───
+        function openModal(taskId) {
+            document.getElementById('modalOverlay').classList.add('active');
+            document.getElementById('editTaskId').value = taskId || '';
+            document.getElementById('modalTitle').textContent = taskId ? 'Edit Task' : 'New Task';
+            pendingFiles = [];
+            document.getElementById('filePreviewList').innerHTML = '';
+
+            if (taskId) {
+                const task = allTasks.find(t => t.id === taskId);
+                if (task) {
+                    document.getElementById('modalTaskTitle').value = task.title;
+                    document.getElementById('modalTaskDesc').value = task.description || '';
+                    document.getElementById('modalPriority').value = task.priority;
+                    document.getElementById('modalDate').value = task.reminder_date || '';
+                    document.getElementById('modalTime').value = task.reminder_time || '';
+                    // Restore sound mode
+                    if (task.custom_sound === 'none') {
+                        document.getElementById('modalSound').value = 'none';
+                    } else if (task.custom_sound && task.custom_sound.startsWith('custom:')) {
+                        document.getElementById('modalSound').value = 'custom';
+                        document.getElementById('modalSoundFileName').textContent = '✓ ' + task.custom_sound.split(':')[1];
+                    } else {
+                        document.getElementById('modalSound').value = task.custom_sound || '';
+                    }
+                    onModalSoundChange();
+                }
+            } else {
+                document.getElementById('modalTaskTitle').value = '';
+                document.getElementById('modalTaskDesc').value = '';
+                document.getElementById('modalPriority').value = 'medium';
+                document.getElementById('modalDate').value = '';
+                document.getElementById('modalTime').value = '';
+                document.getElementById('modalSound').value = '';
+                document.getElementById('modalSoundFileName').textContent = '';
+                onModalSoundChange();
+            }
+            lucide.createIcons();
+        }
+
+        function closeModal(e) {
+            if (e && e.target !== document.getElementById('modalOverlay')) return;
+            document.getElementById('modalOverlay').classList.remove('active');
+            audioController.stopAll();
+        }
+
+        function editTask(id) { openModal(id); }
+
+        async function deleteTask(id) {
+            if (!confirm('Delete this task? This cannot be undone.')) return;
+            try {
+                await fetch(`/api/tasks/${id}`, { method: 'DELETE' });
+                showToast('🗑️ Deleted', 'Task has been removed.', 'medium', null);
+                fetchTasks();
+            } catch (err) {
+                console.error('Delete failed:', err);
+            }
+        }
+
+        async function saveTask() {
+            const id = document.getElementById('editTaskId').value;
+            const titleEl = document.getElementById('modalTaskTitle');
+            const title = titleEl.value.trim();
+
+            // ─── Strict Title Validation ───
+            if (!title) {
+                titleEl.classList.add('input-error');
+                // Show inline error
+                let errEl = document.getElementById('titleError');
+                if (!errEl) {
+                    errEl = document.createElement('div');
+                    errEl.id = 'titleError';
+                    errEl.className = 'field-error';
+                    errEl.textContent = '⚠ Title is required';
+                    titleEl.parentNode.appendChild(errEl);
+                }
+                errEl.style.display = 'block';
+                titleEl.focus();
+                // Auto-clear error on typing
+                titleEl.addEventListener('input', function clearErr() {
+                    errEl.style.display = 'none';
+                    titleEl.classList.remove('input-error');
+                    titleEl.removeEventListener('input', clearErr);
+                }, { once: true });
+                return;
+            }
+
+            // ─── Smart Date/Time Defaults with T+5 ───
+            const now = new Date();
+            const todayStr = now.toISOString().split('T')[0];
+            let date = document.getElementById('modalDate').value;
+            let time = document.getElementById('modalTime').value;
+
+            // Helper: format Date → "HH:MM"
+            function fmtTime(d) {
+                return d.toTimeString().slice(0, 5);
+            }
+
+            // Logic C: Both empty → today + now (immediate reminder)
+            if (!date && !time) {
+                date = todayStr;
+                time = fmtTime(now);
+            }
+            // Date empty, time set → default date to today
+            else if (!date && time) {
+                date = todayStr;
+            }
+            // T+5: Today's date selected, no time → now + 5 minutes
+            else if (date === todayStr && !time) {
+                const plus5 = new Date(now.getTime() + 5 * 60 * 1000);
+                time = fmtTime(plus5);
+            }
+            // Future date, no time → midnight
+            else if (date && !time) {
+                time = '00:00';
+            }
+
+            // ─── Past-Date Validation ───
+            const selectedDT = new Date(`${date}T${time}:00`);
+            if (selectedDT < now && !id) {
+                // Only block new tasks, allow editing past tasks
+                showToast(
+                    '⚠️ Cannot Schedule in the Past',
+                    'Please select a future date and time for your reminder.',
+                    'warning',
+                    null
+                );
+                // Highlight date/time fields
+                document.getElementById('modalDate').classList.add('input-error');
+                document.getElementById('modalTime').classList.add('input-error');
+                setTimeout(() => {
+                    document.getElementById('modalDate').classList.remove('input-error');
+                    document.getElementById('modalTime').classList.remove('input-error');
+                }, 3000);
+                return;
+            }
+
+            // Resolve sound mode → custom_sound value
+            let soundVal = document.getElementById('modalSound').value;
+            if (soundVal === 'custom' && modalCustomSoundFile) {
+                soundVal = modalCustomSoundFile;
+            } else if (soundVal === 'custom') {
+                soundVal = null;
+            } else if (soundVal === '') {
+                soundVal = null;
+            }
+
+            const body = {
+                title,
+                description: document.getElementById('modalTaskDesc').value,
+                priority: document.getElementById('modalPriority').value,
+                reminder_date: date,
+                reminder_time: time,
+                custom_sound: soundVal
+            };
+
+            try {
+                let res;
+                if (id) {
+                    res = await fetch(`/api/tasks/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+                } else {
+                    res = await fetch('/api/tasks', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+                }
+                const data = await res.json();
+
+                // Upload pending files
+                if (pendingFiles.length > 0 && data.id) {
+                    for (const file of pendingFiles) {
+                        const fd = new FormData();
+                        fd.append('file', file);
+                        await fetch(`/api/tasks/${data.id}/attachments`, { method: 'POST', body: fd });
+                    }
+                }
+
+                pendingFiles = [];
+                closeModal();
+                fetchTasks();
+                // Redirect to dashboard
+                navigateToDashboard();
+            } catch (err) { console.error(err); }
+        }
+
+        // ─── File Handling ───
+        function handleFiles(files) {
+            for (const f of files) {
+                pendingFiles.push(f);
+                addFilePreview(f);
+            }
+        }
+
+        function addFilePreview(file) {
+            const list = document.getElementById('filePreviewList');
+            const div = document.createElement('div');
+            div.className = 'file-preview-item';
+            const icon = file.type.startsWith('image/') ? '🖼️' : file.type.startsWith('video/') ? '🎬' : '📄';
+            div.innerHTML = `<span>${icon} ${file.name}</span><button onclick="this.parentElement.remove();pendingFiles=pendingFiles.filter(f=>f.name!=='${file.name}')">✕</button>`;
+            list.appendChild(div);
+        }
+
+        // Drag and drop
+        const dz = document.getElementById('dropzone');
+        dz.addEventListener('dragover', (e) => { e.preventDefault(); dz.classList.add('dragover'); });
+        dz.addEventListener('dragleave', () => dz.classList.remove('dragover'));
+        dz.addEventListener('drop', (e) => { e.preventDefault(); dz.classList.remove('dragover'); handleFiles(e.dataTransfer.files); });
+
+        // ─── CRUD ───
+        async function toggleTask(id, is_completed) {
+            await fetch(`/api/tasks/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ is_completed }) });
+            fetchTasks();
+        }
+
+        async function deleteTask(id) {
+            if (!confirm('Delete this task?')) return;
+            await fetch(`/api/tasks/${id}`, { method: 'DELETE' });
+            fetchTasks();
+        }
+
+        async function deleteAttachment(id, e) {
+            e.preventDefault();
+            e.stopPropagation();
+            await fetch(`/api/attachments/${id}`, { method: 'DELETE' });
+            fetchTasks();
+        }
+
+        // ─── Profile Management ───
+        async function saveProfile() {
+            const alertEl = document.getElementById('profileAlert');
+            try {
+                const res = await fetch('/api/user/profile', {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        username: document.getElementById('profileUsername').value,
+                        email: document.getElementById('profileEmail').value,
+                        gmail: document.getElementById('profileGmail').value
+                    })
+                });
+                const data = await res.json();
+                alertEl.className = res.ok ? 'settings-alert alert-success' : 'settings-alert alert-error';
+                alertEl.textContent = data.message || data.error;
+                if (res.ok) {
+                    fetchUser();
+                    // Redirect to dashboard after 1s
+                    setTimeout(() => navigateToDashboard(), 1000);
+                }
+            } catch { alertEl.className = 'settings-alert alert-error'; alertEl.textContent = 'Connection error'; }
+        }
+
+        async function changePassword() {
+            const alertEl = document.getElementById('passwordAlert');
+            const newPw = document.getElementById('newPassword').value;
+            const confirmPw = document.getElementById('confirmPassword').value;
+            if (newPw !== confirmPw) {
+                alertEl.className = 'settings-alert alert-error';
+                alertEl.textContent = 'Passwords do not match';
+                return;
+            }
+            try {
+                const res = await fetch('/api/user/password', {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        current_password: document.getElementById('currentPassword').value,
+                        new_password: newPw
+                    })
+                });
+                const data = await res.json();
+                alertEl.className = res.ok ? 'settings-alert alert-success' : 'settings-alert alert-error';
+                alertEl.textContent = data.message || data.error;
+                if (res.ok) {
+                    document.getElementById('currentPassword').value = '';
+                    document.getElementById('newPassword').value = '';
+                    document.getElementById('confirmPassword').value = '';
+                }
+            } catch { alertEl.className = 'settings-alert alert-error'; alertEl.textContent = 'Connection error'; }
+        }
+
+        async function uploadAvatar(file) {
+            if (!file) return;
+            const fd = new FormData();
+            fd.append('file', file);
+            try {
+                const res = await fetch('/api/user/avatar', { method: 'POST', body: fd });
+                if (res.ok) fetchUser();
+            } catch { }
+        }
+
+        async function setSoundPref(sound) {
+            await fetch('/api/user/sound', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ sound })
+            });
+            userPrefs.preferred_sound = sound;
+        }
+
+        async function uploadCustomSound(file) {
+            if (!file) return;
+            const fd = new FormData();
+            fd.append('file', file);
+            try {
+                const res = await fetch('/api/user/sound/upload', { method: 'POST', body: fd });
+                const data = await res.json();
+                if (res.ok) {
+                    userPrefs.preferred_sound = data.preferred_sound;
+                    document.getElementById('customSoundName').textContent = `✓ ${file.name}`;
+                }
+            } catch { }
+        }
+
+        // ─── Singleton Audio Controller ───
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+
+        const audioController = {
+            _ctx: null,
+            _oscs: [],
+            _timeouts: [],
+            _htmlAudio: null,
+            _activeBtn: null,
+            _activeSoundType: null,
+
+            stopAll() {
+                // Stop oscillators
+                this._oscs.forEach(o => { try { o.stop(); } catch { } });
+                this._oscs = [];
+                // Clear scheduled tones
+                this._timeouts.forEach(t => clearTimeout(t));
+                this._timeouts = [];
+                // Close AudioContext
+                if (this._ctx && this._ctx.state !== 'closed') {
+                    this._ctx.close().catch(() => { });
+                }
+                this._ctx = null;
+                // Stop HTML audio
+                if (this._htmlAudio) {
+                    this._htmlAudio.pause();
+                    this._htmlAudio.currentTime = 0;
+                    this._htmlAudio = null;
+                }
+                // Reset button icon
+                this._resetBtnIcon();
+                this._activeSoundType = null;
+            },
+
+            _resetBtnIcon() {
+                if (this._activeBtn) {
+                    this._activeBtn.innerHTML = '<i data-lucide="play" style="width:14px;height:14px"></i>';
+                    this._activeBtn.classList.remove('sound-playing');
+                    this._activeBtn = null;
+                    lucide.createIcons();
+                }
+            },
+
+            _setBtnPlaying(btn) {
+                this._activeBtn = btn;
+                if (btn) {
+                    btn.innerHTML = '<i data-lucide="square" style="width:14px;height:14px"></i>';
+                    btn.classList.add('sound-playing');
+                    lucide.createIcons();
+                }
+            },
+
+            _newCtx() {
+                this._ctx = new AudioCtx();
+                return this._ctx;
+            },
+
+            _tone(freq, duration, type = 'sine', gain = 0.3) {
+                const ctx = this._ctx || this._newCtx();
+                const osc = ctx.createOscillator();
+                const vol = ctx.createGain();
+                osc.type = type;
+                osc.frequency.value = freq;
+                vol.gain.value = gain;
+                osc.connect(vol);
+                vol.connect(ctx.destination);
+                vol.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
+                osc.start();
+                osc.stop(ctx.currentTime + duration);
+                this._oscs.push(osc);
+
+                // Auto-cleanup after tone ends
+                const cleanupTimeout = setTimeout(() => {
+                    const idx = this._oscs.indexOf(osc);
+                    if (idx !== -1) this._oscs.splice(idx, 1);
+                    if (this._oscs.length === 0 && this._timeouts.length === 0) {
+                        this._resetBtnIcon();
+                        this._activeSoundType = null;
+                    }
+                }, duration * 1000 + 100);
+                this._timeouts.push(cleanupTimeout);
+            },
+
+            play(soundType, priority) {
+                this.stopAll();
+                this._activeSoundType = soundType;
+                this._newCtx();
+
+                const pref = soundType || userPrefs.preferred_sound || 'chime';
+
+                // Custom uploaded sound
+                if (pref.startsWith('custom:')) {
+                    const audio = new Audio(`/uploads/${pref.split(':')[1]}`);
+                    this._htmlAudio = audio;
+                    audio.play().catch(() => { });
+                    audio.onended = () => { this._htmlAudio = null; this._resetBtnIcon(); this._activeSoundType = null; };
+                    return;
+                }
+
+                if (pref === 'alert' || priority === 'high') {
+                    this._tone(880, 0.3, 'square', 0.25);
+                    const t1 = setTimeout(() => this._tone(1100, 0.3, 'square', 0.25), 350);
+                    const t2 = setTimeout(() => this._tone(880, 0.4, 'square', 0.2), 700);
+                    this._timeouts.push(t1, t2);
+                } else if (pref === 'soft' || priority === 'low') {
+                    this._tone(440, 0.6, 'sine', 0.15);
+                } else {
+                    this._tone(660, 0.2, 'triangle', 0.25);
+                    const t1 = setTimeout(() => this._tone(880, 0.3, 'triangle', 0.2), 250);
+                    this._timeouts.push(t1);
+                }
+            }
+        };
+
+        // Unified preview handler with play/pause toggle
+        function handlePreview(soundType, btn, e) {
+            if (e) { e.preventDefault(); e.stopPropagation(); }
+            if (!soundType || soundType === 'none') return; // No sound = no preview
+            // If same sound is playing, stop it (toggle off)
+            if (audioController._activeSoundType === soundType && audioController._activeBtn === btn) {
+                audioController.stopAll();
+                return;
+            }
+            audioController.stopAll();
+            audioController._setBtnPlaying(btn);
+            const priority = soundType === 'alert' ? 'high' : soundType === 'soft' ? 'low' : 'medium';
+            audioController.play(soundType, priority);
+        }
+
+        // Modal sound mode handlers
+        function onModalSoundChange() {
+            const val = document.getElementById('modalSound').value;
+            const uploadRow = document.getElementById('modalCustomUpload');
+            const previewBtn = document.getElementById('modalPreviewBtn');
+            uploadRow.classList.toggle('hidden', val !== 'custom');
+            previewBtn.style.display = val === 'none' ? 'none' : '';
+        }
+
+        function previewModalSound(btn, e) {
+            const mode = document.getElementById('modalSound').value;
+            if (mode === 'none') return;
+            if (mode === 'custom') {
+                // Preview custom uploaded file
+                if (modalCustomSoundFile) {
+                    handlePreview(modalCustomSoundFile, btn, e);
+                } else {
+                    handlePreview('chime', btn, e); // Fallback if nothing uploaded
+                }
+            } else {
+                // Act Accordingly: play the sound matching current priority
+                const priority = document.getElementById('modalPriority').value;
+                const PMAP = { high: 'alert', medium: 'chime', low: 'soft' };
+                handlePreview(PMAP[priority] || 'chime', btn, e);
+            }
+        }
+
+        let modalCustomSoundFile = null;
+
+        async function handleModalSoundUpload(file) {
+            if (!file) return;
+            const fd = new FormData();
+            fd.append('file', file);
+            const res = await fetch('/api/user/sound/upload', { method: 'POST', body: fd });
+            const data = await res.json();
+            if (res.ok) {
+                modalCustomSoundFile = data.preferred_sound; // 'custom:filename'
+                document.getElementById('modalSoundFileName').textContent = '✓ ' + file.name;
+            }
+        }
+
+        // Legacy wrappers for alarm engine
+        function playSound(priority, soundOverride) {
+            audioController.play(soundOverride || null, priority);
+        }
+
+        // ─── Toast Notifications ───
+        function showToast(title, message, priority, taskId) {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            const colorClass = priority === 'high' ? 'toast--high' : priority === 'low' ? 'toast--low' : priority === 'warning' ? 'toast--warning' : 'toast--med';
+            toast.className = `toast ${colorClass}`;
+            toast.innerHTML = `
+                <div class="toast-icon"><i data-lucide="bell-ring" style="width:20px;height:20px"></i></div>
+                <div class="toast-body">
+                    <div class="toast-title">${title}</div>
+                    <div class="toast-msg">${message}</div>
+                    ${taskId ? `<div class="toast-actions">
+                        <button class="toast-action-btn toast-complete" onclick="completeFromToast(${taskId}, this)">✓ Complete</button>
+                        <button class="toast-action-btn toast-snooze" onclick="snoozeFromToast(${taskId}, this)">⏰ Snooze 10m</button>
+                    </div>` : ''}
+                </div>
+                <button class="toast-close" onclick="this.parentElement.remove()">✕</button>
+            `;
+            container.appendChild(toast);
+            lucide.createIcons();
+            setTimeout(() => { if (toast.parentElement) toast.classList.add('toast-exit'); }, 10000);
+            setTimeout(() => { if (toast.parentElement) toast.remove(); }, 10500);
+        }
+
+        async function completeFromToast(taskId, btn) {
+            btn.textContent = '...';
+            audioController.stopAll();
+            await fetch(`/api/tasks/${taskId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ is_completed: true }) });
+            btn.closest('.toast').remove();
+            fetchTasks();
+        }
+
+        async function snoozeFromToast(taskId, btn) {
+            btn.textContent = '...';
+            audioController.stopAll();
+            const res = await fetch(`/api/tasks/${taskId}/snooze`, { method: 'POST' });
+            if (res.ok) {
+                const data = await res.json();
+                firedAlarms.delete(taskId);
+                btn.closest('.toast').remove();
+                showToast('⏰ Snoozed', `Moved to ${data.new_time}`, 'medium', null);
+                fetchTasks();
+            }
+        }
+
+        // ─── OS Native Notifications ───
+        function requestNotificationPermission() {
+            if ('Notification' in window && Notification.permission === 'default') {
+                Notification.requestPermission();
+            }
+        }
+
+        function sendNativeNotification(task) {
+            if (!('Notification' in window) || Notification.permission !== 'granted') return;
+            // Use SW registration for action buttons on mobile
+            if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+                navigator.serviceWorker.ready.then(reg => {
+                    reg.showNotification(`⏰ ${task.title}`, {
+                        body: task.description || `${task.priority.toUpperCase()} priority — due now!`,
+                        icon: '/static/icons/icon-192.png',
+                        tag: `task-${task.id}`,
+                        requireInteraction: true,
+                        vibrate: [200, 100, 200, 100, 400],
+                        data: { taskId: task.id, url: '/' },
+                        actions: [
+                            { action: 'complete', title: '✓ Complete' },
+                            { action: 'snooze', title: '⏰ Snooze 10m' }
+                        ]
+                    });
+                });
+            } else {
+                const n = new Notification(`⏰ ${task.title}`, {
+                    body: task.description || `${task.priority.toUpperCase()} priority — due now!`,
+                    tag: `task-${task.id}`,
+                    requireInteraction: true
+                });
+                n.onclick = () => { window.focus(); n.close(); };
+            }
+        }
+
+        // ─── Service Worker Registration ───
+        function registerServiceWorker() {
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.register('/sw.js', { scope: '/' })
+                    .then(reg => console.log('SW registered:', reg.scope))
+                    .catch(err => console.log('SW registration failed:', err));
+
+                // Listen for messages from SW
+                navigator.serviceWorker.addEventListener('message', event => {
+                    if (event.data.type === 'TASK_COMPLETED' || event.data.type === 'TASK_SNOOZED') {
+                        audioController.stopAll();
+                        if (event.data.type === 'TASK_SNOOZED') firedAlarms.delete(event.data.taskId);
+                        fetchTasks();
+                    } else if (event.data.type === 'SYNC_TASKS') {
+                        fetchTasks();
+                    }
+                });
+            }
+        }
+
+        // ─── Sound Resolution (No Settings clash) ───
+        //   1. "none"         → Silence
+        //   2. "custom:file"  → Play uploaded file
+        //   3. Priority map   → high→alert, medium→chime, low→soft
+        //   Settings preference is ONLY used in the Settings tab previews.
+        const PRIORITY_SOUNDS = { high: 'alert', medium: 'chime', low: 'soft' };
+
+        function getNotificationSound(task) {
+            const cs = (task.custom_sound || '').trim();
+
+            // Explicit mute
+            if (cs === 'none') return 'none';
+
+            // Per-task custom uploaded sound
+            if (cs.startsWith('custom:')) return cs;
+
+            // "Act Accordingly" → always use priority-based sound
+            return PRIORITY_SOUNDS[task.priority] || 'chime';
+        }
+
+        // High-intensity vibration pattern
+        const VIBRATION_PATTERN = [500, 110, 500, 110, 450, 110, 200, 110, 700];
+
+        // ─── Alarm Engine ───
+        const firedAlarms = new Set();
+
+        function checkAlarms() {
+            const now = new Date();
+            const nowDate = now.toISOString().split('T')[0];
+            const nowTime = now.toTimeString().slice(0, 5);
+
+            allTasks.forEach(task => {
+                if (task.is_completed || !task.reminder_date || !task.reminder_time) return;
+                if (firedAlarms.has(task.id)) return;
+
+                if (task.reminder_date === nowDate && task.reminder_time === nowTime) {
+                    firedAlarms.add(task.id);
+
+                    const resolvedSound = getNotificationSound(task);
+
+                    if (resolvedSound !== 'none') {
+                        audioController.play(resolvedSound, task.priority);
+                    }
+
+                    if ('vibrate' in navigator) {
+                        navigator.vibrate(VIBRATION_PATTERN);
+                    }
+
+                    // Hero Notification Tile (center screen)
+                    showHeroNotification(task);
+
+                    if (document.hidden) sendNativeNotification(task);
+                }
+            });
+        }
+
+        // ─── Hero Notification Tile ───
+        function showHeroNotification(task) {
+            const overlay = document.getElementById('heroOverlay');
+            const colorMap = {
+                high: { border: 'rgba(255, 60, 60, 0.6)', glow: 'rgba(255, 0, 0, 0.25)', label: 'HIGH PRIORITY', emoji: '🔴' },
+                medium: { border: 'rgba(255, 180, 0, 0.6)', glow: 'rgba(255, 160, 0, 0.25)', label: 'MEDIUM PRIORITY', emoji: '🟡' },
+                low: { border: 'rgba(60, 130, 255, 0.6)', glow: 'rgba(60, 130, 255, 0.25)', label: 'LOW PRIORITY', emoji: '🔵' }
+            };
+            const c = colorMap[task.priority] || colorMap.medium;
+
+            overlay.innerHTML = `
+                <div class="hero-tile hero-tile--${task.priority}" style="border-color:${c.border};box-shadow:0 0 60px ${c.glow}, inset 0 0 40px ${c.glow}">
+                    <div class="hero-tile-badge">${c.emoji} ${c.label}</div>
+                    <div class="hero-tile-icon">⏰</div>
+                    <h2 class="hero-tile-title">${task.title}</h2>
+                    <p class="hero-tile-desc">${task.description || 'This task is due now!'}</p>
+                    <div class="hero-tile-time">
+                        <i data-lucide="clock" style="width:16px;height:16px"></i>
+                        ${task.reminder_date} at ${task.reminder_time}
+                    </div>
+                    <div class="hero-tile-actions">
+                        <button class="hero-btn hero-btn--complete" onclick="heroComplete(${task.id})">
+                            <i data-lucide="check-circle" style="width:20px;height:20px"></i> Complete Task
+                        </button>
+                        <button class="hero-btn hero-btn--snooze" onclick="heroSnooze(${task.id})">
+                            <i data-lucide="alarm-clock" style="width:20px;height:20px"></i> Remind in 10 min
+                        </button>
+                    </div>
+                </div>
+            `;
+            overlay.classList.remove('hidden');
+            lucide.createIcons();
+        }
+
+        function dismissHero() {
+            const overlay = document.getElementById('heroOverlay');
+            const tile = overlay.querySelector('.hero-tile');
+            if (tile) tile.classList.add('hero-tile--exit');
+            audioController.stopAll();
+            setTimeout(() => { overlay.classList.add('hidden'); overlay.innerHTML = ''; }, 400);
+        }
+
+        async function heroComplete(taskId) {
+            dismissHero();
+            await fetch(`/api/tasks/${taskId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ is_completed: true }) });
+            showToast('✓ Completed', 'Task marked as done!', 'medium', null);
+            fetchTasks();
+        }
+
+        async function heroSnooze(taskId) {
+            dismissHero();
+            const res = await fetch(`/api/tasks/${taskId}/snooze`, { method: 'POST' });
+            if (res.ok) {
+                const data = await res.json();
+                firedAlarms.delete(taskId);
+                showToast('⏰ Snoozed', `Moved to ${data.new_time}`, 'medium', null);
+                fetchTasks();
+            }
+        }
+
+        setInterval(checkAlarms, 15000);
+
+        // Kill audio when switching tabs
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) audioController.stopAll();
+        });
+
+        // ─── Interactive Stat Card Filter ───
+        function toggleFilter(filter) {
+            if (activeFilter === filter || filter === null) {
+                activeFilter = null;
+                document.getElementById('filterIndicator').classList.add('hidden');
+            } else {
+                activeFilter = filter;
+                const labels = { all: 'All Tasks', completed: 'Completed', pending: 'Pending', high: 'High Priority' };
+                document.getElementById('filterLabel').textContent = `Showing: ${labels[filter] || filter}`;
+                document.getElementById('filterIndicator').classList.remove('hidden');
+            }
+            document.querySelectorAll('.stat-card').forEach(c => c.classList.remove('stat-card--active'));
+            if (activeFilter) {
+                const id = 'filter' + activeFilter.charAt(0).toUpperCase() + activeFilter.slice(1);
+                const el = document.getElementById(id);
+                if (el) el.classList.add('stat-card--active');
+            }
+            renderAll();
+        }
+
+        // ─── Redirect to Dashboard ───
+        function navigateToDashboard() {
+            currentTab = 'dashboard';
+            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+            document.querySelector('.nav-item[onclick*="dashboard"]').classList.add('active');
+            document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+            document.getElementById('panel-dashboard').classList.add('active');
+        }
+    </script>
+</body>
+
+</html>
