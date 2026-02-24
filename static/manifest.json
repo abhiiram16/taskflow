@@ -2,11 +2,18 @@
     "name": "TaskFlow — Smart Task Manager",
     "short_name": "TaskFlow",
     "description": "A premium task management PWA with priority-based alarms, glassmorphic UI, and native notifications.",
+    "id": "/",
     "start_url": "/",
+    "scope": "/",
     "display": "standalone",
     "background_color": "#0a0e1a",
     "theme_color": "#6366f1",
     "orientation": "any",
+    "prefer_related_applications": false,
+    "categories": [
+        "productivity",
+        "utilities"
+    ],
     "icons": [
         {
             "src": "/static/icons/icon-192.png",

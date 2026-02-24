@@ -7,6 +7,8 @@
     <meta name="theme-color" content="#6366f1">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="TaskFlow">
+    <link rel="apple-touch-icon" href="/static/icons/icon-192.png">
     <title>TaskFlow | Dashboard</title>
     <link rel="manifest" href="/static/manifest.json">
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -1009,6 +1011,10 @@
             if (res.ok) {
                 const data = await res.json();
                 firedAlarms.delete(taskId);
+                // Tell SW to reset this alarm so it can re-fire after snooze
+                if (navigator.serviceWorker && navigator.serviceWorker.controller) {
+                    navigator.serviceWorker.controller.postMessage({ type: 'RESET_ALARM', taskId });
+                }
                 btn.closest('.toast').remove();
                 showToast('⏰ Snoozed', `Moved to ${data.new_time}`, 'medium', null);
                 fetchTasks();
@@ -1025,21 +1031,53 @@
             }, { once: true });
         }
 
-        // ─── Unlock AudioContext on first gesture (mobile autoplay policy) ───
+        // ─── Universal Audio Manager — Mobile Permission Unlocker ───
+        // Creates a persistent AudioContext and plays a silent buffer on first
+        // user gesture. This permanently "unlocks" the phone's speakers so
+        // subsequent alarm sounds play without requiring another gesture.
         function unlockAudioOnGesture() {
+            if (window.__audioUnlocked) return;
+
             const unlock = () => {
-                const ctx = new (window.AudioContext || window.webkitAudioContext)();
-                const buf = ctx.createBuffer(1, 1, 22050);
-                const src = ctx.createBufferSource();
-                src.buffer = buf;
-                src.connect(ctx.destination);
-                src.start(0);
-                ctx.resume().then(() => ctx.close());
-                document.removeEventListener('click', unlock);
-                document.removeEventListener('touchstart', unlock);
+                if (window.__audioUnlocked) return;
+
+                try {
+                    const AudioCtxClass = window.AudioContext || window.webkitAudioContext;
+                    const ctx = new AudioCtxClass();
+
+                    // Create and play a silent buffer — this is the trick that
+                    // permanently unlocks audio on iOS/Android
+                    const buf = ctx.createBuffer(1, 1, 22050);
+                    const src = ctx.createBufferSource();
+                    src.buffer = buf;
+                    src.connect(ctx.destination);
+                    src.start(0);
+
+                    // Also try to pre-load an HTML5 Audio element (catches more edge cases)
+                    const silentAudio = new Audio('data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=');
+                    silentAudio.volume = 0.01;
+                    silentAudio.play().catch(() => { });
+
+                    ctx.resume().then(() => {
+                        window.__audioUnlocked = true;
+                        console.log('🔊 Audio unlocked for mobile');
+                        // Keep context alive briefly, then close
+                        setTimeout(() => ctx.close().catch(() => { }), 1000);
+                    });
+                } catch (e) {
+                    console.warn('Audio unlock failed:', e);
+                }
+
+                // Remove all unlock listeners
+                ['click', 'touchstart', 'touchend', 'keydown'].forEach(evt => {
+                    document.removeEventListener(evt, unlock);
+                });
             };
-            document.addEventListener('click', unlock, { once: true });
-            document.addEventListener('touchstart', unlock, { once: true });
+
+            // Listen on multiple gesture types for maximum compatibility
+            ['click', 'touchstart', 'touchend', 'keydown'].forEach(evt => {
+                document.addEventListener(evt, unlock, { once: true, passive: true });
+            });
         }
 
         function sendNativeNotification(task) {
@@ -1081,20 +1119,50 @@
                             const newSW = reg.installing;
                             newSW.addEventListener('statechange', () => {
                                 if (newSW.state === 'activated') {
-                                    console.log('New SW activated');
+                                    console.log('New SW v4 activated — background alarms enabled');
                                 }
                             });
                         });
                     })
                     .catch(err => console.log('SW registration failed:', err));
 
-                // Listen for messages from SW
+                // Listen for messages from SW (includes background alarm engine)
                 navigator.serviceWorker.addEventListener('message', event => {
-                    if (event.data.type === 'TASK_COMPLETED' || event.data.type === 'TASK_SNOOZED') {
-                        audioController.stopAll();
-                        if (event.data.type === 'TASK_SNOOZED') firedAlarms.delete(event.data.taskId);
+                    const { data } = event;
+
+                    if (data.type === 'ALARM_FIRED' && data.task) {
+                        // Background alarm fired — sync with UI
+                        const task = data.task;
+                        if (!firedAlarms.has(task.id)) {
+                            firedAlarms.add(task.id);
+
+                            // Play sound
+                            const resolvedSound = getNotificationSound(task);
+                            if (resolvedSound !== 'none') {
+                                audioController.play(resolvedSound, task.priority);
+                            }
+
+                            // Vibrate
+                            if ('vibrate' in navigator) {
+                                navigator.vibrate(VIBRATION_PATTERN);
+                            }
+
+                            // Show hero tile if tab is visible
+                            if (!document.hidden) {
+                                showHeroNotification(task);
+                            }
+
+                            // Show toast
+                            showToast(`⏰ ${task.title}`, task.description || 'Task is due now!', task.priority, task.id);
+                        }
                         fetchTasks();
-                    } else if (event.data.type === 'SYNC_TASKS') {
+
+                    } else if (data.type === 'TASK_COMPLETED' || data.type === 'TASK_SNOOZED') {
+                        audioController.stopAll();
+                        if (data.type === 'TASK_SNOOZED') firedAlarms.delete(data.taskId);
+                        fetchTasks();
+
+                    } else if (data.type === 'SYNC_TASKS') {
                         fetchTasks();
                     }
                 });
@@ -1223,6 +1291,10 @@
             if (res.ok) {
                 const data = await res.json();
                 firedAlarms.delete(taskId);
+                // Tell SW to reset this alarm so it can re-fire after snooze
+                if (navigator.serviceWorker && navigator.serviceWorker.controller) {
+                    navigator.serviceWorker.controller.postMessage({ type: 'RESET_ALARM', taskId });
+                }
                 showToast('⏰ Snoozed', `Moved to ${data.new_time}`, 'medium', null);
                 fetchTasks();
             }

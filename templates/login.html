@@ -4,7 +4,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#6366f1">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="TaskFlow">
+    <link rel="apple-touch-icon" href="/static/icons/icon-192.png">
     <title>TaskFlow | Sign In</title>
+    <link rel="manifest" href="/static/manifest.json">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;800&display=swap" rel="stylesheet">
@@ -204,6 +210,35 @@
                 }
             } catch { showAlert('Connection error', 'error'); }
         });
+
+        // ─── Mobile Audio Unlocker ───
+        // Pre-unlock the phone's speakers on the login page so alarms can
+        // play on the dashboard without needing another user gesture.
+        (function unlockAudioOnLogin() {
+            if (window.__audioUnlocked) return;
+            const unlock = () => {
+                if (window.__audioUnlocked) return;
+                try {
+                    const Ctx = window.AudioContext || window.webkitAudioContext;
+                    const ctx = new Ctx();
+                    const buf = ctx.createBuffer(1, 1, 22050);
+                    const src = ctx.createBufferSource();
+                    src.buffer = buf;
+                    src.connect(ctx.destination);
+                    src.start(0);
+                    ctx.resume().then(() => {
+                        window.__audioUnlocked = true;
+                        setTimeout(() => ctx.close().catch(() => { }), 1000);
+                    });
+                } catch (e) { /* ignore */ }
+                ['click', 'touchstart', 'touchend'].forEach(evt => {
+                    document.removeEventListener(evt, unlock);
+                });
+            };
+            ['click', 'touchstart', 'touchend'].forEach(evt => {
+                document.addEventListener(evt, unlock, { once: true, passive: true });
+            });
+        })();
     </script>
 </body>
 
