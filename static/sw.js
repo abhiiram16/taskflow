@@ -1,5 +1,5 @@
-// TaskFlow Service Worker v2
-const CACHE_NAME = 'taskflow-v2';
+// TaskFlow Service Worker v3
+const CACHE_NAME = 'taskflow-v3';
 const STATIC_ASSETS = [
     '/',
     '/static/css/style.css',

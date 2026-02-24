@@ -338,8 +338,9 @@
         lucide.createIcons();
         fetchUser();
         fetchTasks();
-        requestNotificationPermission();
         registerServiceWorker();
+        unlockAudioOnGesture();
+        requestNotificationOnGesture();
 
         // ─── User ───
         let userPrefs = { preferred_sound: 'chime' };
@@ -1015,10 +1016,30 @@
         }
 
         // ─── OS Native Notifications ───
-        function requestNotificationPermission() {
-            if ('Notification' in window && Notification.permission === 'default') {
+        // Request permission on first user gesture (not page load — browsers block that)
+        function requestNotificationOnGesture() {
+            if (!('Notification' in window) || Notification.permission !== 'default') return;
+            document.addEventListener('click', function askOnce() {
                 Notification.requestPermission();
-            }
+                document.removeEventListener('click', askOnce);
+            }, { once: true });
+        }
+
+        // ─── Unlock AudioContext on first gesture (mobile autoplay policy) ───
+        function unlockAudioOnGesture() {
+            const unlock = () => {
+                const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                const buf = ctx.createBuffer(1, 1, 22050);
+                const src = ctx.createBufferSource();
+                src.buffer = buf;
+                src.connect(ctx.destination);
+                src.start(0);
+                ctx.resume().then(() => ctx.close());
+                document.removeEventListener('click', unlock);
+                document.removeEventListener('touchstart', unlock);
+            };
+            document.addEventListener('click', unlock, { once: true });
+            document.addEventListener('touchstart', unlock, { once: true });
         }
 
         function sendNativeNotification(task) {
@@ -1053,7 +1074,18 @@
         function registerServiceWorker() {
             if ('serviceWorker' in navigator) {
                 navigator.serviceWorker.register('/sw.js', { scope: '/' })
-                    .then(reg => console.log('SW registered:', reg.scope))
+                    .then(reg => {
+                        console.log('SW registered:', reg.scope);
+                        // Force new SW to activate immediately
+                        reg.addEventListener('updatefound', () => {
+                            const newSW = reg.installing;
+                            newSW.addEventListener('statechange', () => {
+                                if (newSW.state === 'activated') {
+                                    console.log('New SW activated');
+                                }
+                            });
+                        });
+                    })
                     .catch(err => console.log('SW registration failed:', err));
 
                 // Listen for messages from SW
@@ -1097,14 +1129,19 @@
 
         function checkAlarms() {
             const now = new Date();
-            const nowDate = now.toISOString().split('T')[0];
-            const nowTime = now.toTimeString().slice(0, 5);
 
             allTasks.forEach(task => {
                 if (task.is_completed || !task.reminder_date || !task.reminder_time) return;
                 if (firedAlarms.has(task.id)) return;
 
-                if (task.reminder_date === nowDate && task.reminder_time === nowTime) {
+                // Parse reminder into a Date object and compare (catches the window even if check is late)
+                const [y, m, d] = task.reminder_date.split('-').map(Number);
+                const [hh, mm] = task.reminder_time.split(':').map(Number);
+                const reminderTime = new Date(y, m - 1, d, hh, mm, 0);
+
+                // Fire if reminder time has passed but less than 2 minutes ago
+                const diff = now - reminderTime;
+                if (diff >= 0 && diff < 120000) {
                     firedAlarms.add(task.id);
 
                     const resolvedSound = getNotificationSound(task);
@@ -1117,10 +1154,16 @@
                         navigator.vibrate(VIBRATION_PATTERN);
                     }
 
-                    // Hero Notification Tile (center screen)
-                    showHeroNotification(task);
+                    // Hero Notification Tile (center screen) when tab is visible
+                    if (!document.hidden) {
+                        showHeroNotification(task);
+                    }
 
-                    if (document.hidden) sendNativeNotification(task);
+                    // Always send native notification (works even in background)
+                    sendNativeNotification(task);
+
+                    // Show toast as fallback
+                    showToast(`⏰ ${task.title}`, task.description || 'Task is due now!', task.priority, task.id);
                 }
             });
         }
@@ -1185,11 +1228,15 @@
             }
         }
 
-        setInterval(checkAlarms, 15000);
+        // Check alarms every 10 seconds (more reliable than 15s for catching the minute window)
+        setInterval(checkAlarms, 10000);
 
-        // Kill audio when switching tabs
+        // When returning to tab, re-check alarms and refresh tasks
         document.addEventListener('visibilitychange', () => {
-            if (document.hidden) audioController.stopAll();
+            if (!document.hidden) {
+                fetchTasks();
+                setTimeout(checkAlarms, 500);
+            }
         });
 
         // ─── Interactive Stat Card Filter ───
