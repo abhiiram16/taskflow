@@ -195,6 +195,14 @@ def add_task():
         # If date was explicitly set but no time → midnight; otherwise → now
         r_time = now.strftime('%H:%M') if not data.get('reminder_date') else '00:00'
 
+    # Past-date validation
+    try:
+        reminder_dt = datetime.strptime(f"{r_date} {r_time}", '%Y-%m-%d %H:%M')
+        if reminder_dt < now:
+            return jsonify({'error': 'Cannot schedule a reminder in the past'}), 400
+    except ValueError:
+        pass  # Let it through if date parsing fails
+
     task = Task(
         title=data['title'],
         description=data.get('description', ''),
@@ -216,6 +224,19 @@ def update_task(id):
     for field in ['title', 'description', 'priority', 'is_completed', 'reminder_date', 'reminder_time', 'custom_sound']:
         if field in data:
             setattr(task, field, data[field])
+
+    # Past-date validation for reminder changes (skip if just toggling completion)
+    if ('reminder_date' in data or 'reminder_time' in data) and not data.get('is_completed'):
+        r_date = task.reminder_date
+        r_time = task.reminder_time
+        if r_date and r_time:
+            try:
+                reminder_dt = datetime.strptime(f"{r_date} {r_time}", '%Y-%m-%d %H:%M')
+                if reminder_dt < datetime.now():
+                    return jsonify({'error': 'Cannot schedule a reminder in the past'}), 400
+            except ValueError:
+                pass
+
     db.session.commit()
     return jsonify(task.to_dict())
 

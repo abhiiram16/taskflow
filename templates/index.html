@@ -576,7 +576,10 @@
 
             // ─── Smart Date/Time Defaults with T+5 ───
             const now = new Date();
-            const todayStr = now.toISOString().split('T')[0];
+            // Use local date (NOT toISOString which converts to UTC)
+            const todayStr = now.getFullYear() + '-' +
+                String(now.getMonth() + 1).padStart(2, '0') + '-' +
+                String(now.getDate()).padStart(2, '0');
             let date = document.getElementById('modalDate').value;
             let time = document.getElementById('modalTime').value;
 
@@ -604,10 +607,9 @@
                 time = '00:00';
             }
 
-            // ─── Past-Date Validation ───
+            // ─── Past-Date Validation (blocks BOTH new AND edited tasks) ───
             const selectedDT = new Date(`${date}T${time}:00`);
-            if (selectedDT < now && !id) {
-                // Only block new tasks, allow editing past tasks
+            if (selectedDT < now) {
                 showToast(
                     '⚠️ Cannot Schedule in the Past',
                     'Please select a future date and time for your reminder.',
