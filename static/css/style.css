@@ -1823,11 +1823,93 @@ input[type="time"] {
     transform: translateY(-2px);
 }
 
+/* ═══════════════════════════════════════════
+   RESPONSIVE — Tablet (≤ 768px)
+   ═══════════════════════════════════════════ */
+@media (max-width: 768px) {
+
+    /* Sidebar → off-canvas overlay */
+    .sidebar {
+        transform: translateX(-100%);
+        z-index: 300;
+        box-shadow: none;
+    }
+
+    .sidebar.open {
+        transform: translateX(0);
+        box-shadow: 4px 0 24px rgba(0, 0, 0, 0.4);
+    }
+
+    /* Sidebar backdrop */
+    .sidebar.open~.main-area::before {
+        content: '';
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.45);
+        z-index: 199;
+    }
+
+    .main-area {
+        margin-left: 0;
+    }
+
+    .hamburger {
+        display: flex;
+    }
+
+    /* Stats grid — 2 columns */
+    .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 0.75rem;
+    }
+
+    /* Modal — wider on tablet */
+    .modal {
+        width: 95%;
+        max-width: 95%;
+        max-height: 90vh;
+    }
+
+    /* Form row — stack on narrow */
+    .form-row {
+        flex-direction: column;
+    }
+
+    /* Settings cards — full width */
+    .settings-card {
+        max-width: 100%;
+    }
+
+    /* Panel header — wrap */
+    .panel-header {
+        flex-wrap: wrap;
+        gap: 0.75rem;
+    }
+
+    /* Hero overlay — responsive padding */
+    .hero-overlay {
+        padding: 1rem;
+    }
+
+    .hero-tile {
+        max-width: 95%;
+        padding: 1.5rem;
+    }
+
+    .hero-title {
+        font-size: 1.3rem;
+    }
+}
+
+/* ═══════════════════════════════════════════
+   RESPONSIVE — Mobile (≤ 480px)
+   ═══════════════════════════════════════════ */
 @media (max-width: 480px) {
     html {
         font-size: 14px;
     }
 
+    /* Stats grid — single column */
     .stats-grid {
         grid-template-columns: 1fr;
     }
@@ -1836,9 +1918,29 @@ input[type="time"] {
         padding: 1rem;
     }
 
-    /* Touch-friendly tasks */
+    /* Topbar — compact */
+    .topbar {
+        padding: 0 0.75rem;
+        gap: 0.5rem;
+    }
+
+    .topbar-search {
+        max-width: none;
+    }
+
+    .user-name {
+        display: none;
+    }
+
+    /* Touch-friendly task cards */
     .task-card {
         padding: 1rem;
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+
+    .task-actions {
+        align-self: flex-end;
     }
 
     .task-card .btn-icon {
@@ -1849,6 +1951,12 @@ input[type="time"] {
     /* Settings on mobile */
     .settings-card {
         padding: 1.2rem;
+    }
+
+    .settings-row {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.5rem;
     }
 
     .sound-option {
@@ -1871,6 +1979,26 @@ input[type="time"] {
         right: 1rem;
         bottom: 1rem;
         max-width: 100%;
+    }
+
+    /* Modal — full screen on mobile */
+    .modal {
+        border-radius: 12px 12px 0 0;
+        max-height: 95vh;
+    }
+
+    /* Hero — compact */
+    .hero-tile {
+        padding: 1.25rem;
+    }
+
+    .hero-actions {
+        flex-direction: column;
+    }
+
+    .hero-btn {
+        width: 100%;
+        justify-content: center;
     }
 }
 
