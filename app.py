@@ -12,9 +12,10 @@ app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'taskflow-dev-key-change
 app.config['REMEMBER_COOKIE_DURATION'] = timedelta(days=30)
 app.config['REMEMBER_COOKIE_SECURE'] = False  # Set True in production with HTTPS
 app.config['REMEMBER_COOKIE_HTTPONLY'] = True
+BASEDIR = os.path.abspath(os.path.dirname(__file__))
 app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get(
     'DATABASE_URL',
-    'mysql+pymysql://root:abhi@localhost:3306/tasksmaganerapp'
+    'sqlite:///' + os.path.join(BASEDIR, 'taskflow.db')
 )
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['UPLOAD_FOLDER'] = os.path.join(app.static_folder, 'uploads')
